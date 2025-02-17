@@ -21,10 +21,27 @@ function loadTasks() {
                 let li = document.createElement("li");
                 li.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
 
+                let commentsHTML = "";
+                if (task.comments && Array.isArray(task.comments) && task.comments.length > 0) {
+                    commentsHTML = "<strong>Comentários:</strong><ul class='list-unstyled'>";
+                    task.comments.forEach(comment => {
+                        commentsHTML += `
+                            <li>
+                                <em>"${comment.text}"</em> - <strong>${comment.author ? comment.author.name : "Anônimo"}</strong> 
+                                <small class="text-muted">(${new Date(comment.instant).toLocaleString()})</small>
+                            </li>
+                        `;
+                    });
+                    commentsHTML += "</ul>";
+                } else {
+                    commentsHTML = "<em class='text-muted'>Sem comentários</em>";
+                }
+
                 li.innerHTML = `
                     <div>
                         <strong>${task.title}</strong> - ${task.description}
                         <br> <em class="text-muted">Responsável: ${task.user.name}</em>
+                        <br> ${commentsHTML}
                     </div>
                     <button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')">
                         <i class="bi bi-trash"></i> Excluir
@@ -84,7 +101,6 @@ function deleteTask(taskId) {
             showAlert("Erro ao excluir tarefa!", "danger");
         });
 }
-
 
 function showAlert(message, type) {
     const alertBox = document.getElementById("alertBox");
