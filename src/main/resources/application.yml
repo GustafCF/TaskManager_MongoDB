@@ -1,0 +1,7 @@
+spring:
+    application:
+        name: task_mongoDB
+
+    data:
+        mongodb:
+            uri: mongodb://admin:admin@localhost:27017/workshop_mongo?authSource=admin
