@@ -20,7 +20,7 @@ stages:
   - start
 
 before_script:
-#MONGO VERIFY
+  # MONGO VERIFY
   - RUNNING_MONGO_ID=$(docker container ls -f name=$NOME_CONTAINER_MONGO -f status=running -q)
   - if [[ -z "$RUNNING_MONGO_ID" ]]; then
       CONTAINER_MONGO_ATIVO="falso";
@@ -30,13 +30,13 @@ before_script:
     fi
   - if [[ "$CONTAINER_MONGO_ATIVO" = "falso" ]]; then 
       CONTAINER_ID=$(docker container ls -f name=$NOME_CONTAINER_MONGO -a -q);
-      if [[ -z "CONTAINER_ID" ]]; then
+      if [[ -z "$CONTAINER_ID" ]]; then
         CONTAINER_MONGO_EXISTE="falso";
       else
         CONTAINER_MONGO_EXISTE="verdadeiro";
       fi
     fi
-#APP VERIFY
+  # APP VERIFY
   - RUNNING_APP_ID=$(docker container ls -f name=$NOME_CONTAINER_APP -f status=running -q)
   - if [[ -z "$RUNNING_APP_ID" ]]; then
       CONTAINER_APP_ATIVO="falso";
@@ -49,7 +49,7 @@ before_script:
       if [[ -z "$CONTAINER_ID" ]]; then 
         CONTAINER_APP_EXISTE="falso";
       else
-        CONTAINER_APP_EXISTE="verdadeiro"
+        CONTAINER_APP_EXISTE="verdadeiro";
       fi
     fi
 
@@ -68,7 +68,11 @@ Implantacao_MongoDB:
     - dev
   script:
     - if [[ "$CONTAINER_MONGO_EXISTE" = "falso" ]]; then
-      docker run --name $NOME_CONTAINER_MONGO --network $NOME_DA_REDE -v $PASTA_ORIGEM_VOLUME_MONGO:/data/db -p $BLIND_DE_PORTA_MONGO -e $BLIND_DE_PORTA_MONGO -e $MONGO_INITDB_ROOT_USERNAME -e $MONGO_INITDB_ROOT_PASSWORD -d $IMAGEM_MONGO;
+        docker run --name $NOME_CONTAINER_MONGO --network $NOME_DA_REDE \
+          -v $PASTA_ORIGEM_VOLUME_MONGO:/data/db -p $BLIND_DE_PORTA_MONGO \
+          -e MONGO_INITDB_ROOT_USERNAME=$MONGO_INITDB_ROOT_USERNAME \
+          -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_INITDB_ROOT_PASSWORD \
+          -d $IMAGEM_MONGO;
       else
         echo "Container MongoDB já existe.";
       fi           
@@ -80,10 +84,13 @@ Implantacao_Aplicacao:
     - /^release_[0-9]+(?:.[0-9]+)+$/
   script: 
     - docker build -t $IMAGEM_APP:$CI_COMMIT_SHORT_SHA .
-    - docker tag $IMAGEM_APP:$CI_COMMIT_SHORT_SHA $MAGEM_APP:latest
+    - docker tag $IMAGEM_APP:$CI_COMMIT_SHORT_SHA $IMAGEM_APP:latest
     - docker push $IMAGEM_APP:latest
     - if [[ "$CONTAINER_APP_EXISTE" = "falso" ]]; then
-        docker run --name $NOME_CONTAINER_APP --network $NOME_DA_REDE -p $BLIND_DE_PORTA_APP -e DATA_MONGO_URI=mongodb://admin:admin@mongodb:27017/workshop_mongo?authSource=admin -d $IMAGEM_APP:latest
+        docker run --name $NOME_CONTAINER_APP --network $NOME_DA_REDE \
+          -p $BLIND_DE_PORTA_APP \
+          -e DATA_MONGO_URI=mongodb://admin:admin@mongodb:27017/workshop_mongo?authSource=admin \
+          -d $IMAGEM_APP:latest;
       else
         echo "Container da aplicação já existe.";
       fi
@@ -95,28 +102,28 @@ Ligar_Containers:
   script:
     - if [[ -z "$RUNNING_MONGO_ID" ]]; then
         CONTAINER_ID=$(docker container ls -f name=$NOME_CONTAINER_MONGO -a -q);
-        if [[ -z "CONTAINER_ID" ]]; then 
+        if [[ -z "$CONTAINER_ID" ]]; then 
           CONTAINER_MONGO_EXISTE="falso";
         else
           CONTAINER_MONGO_EXISTE="verdadeiro";
         fi
-        if [[ "$CONTAINER_EXISTE" = "verdadeiro" ]]; then
+        if [[ "$CONTAINER_MONGO_EXISTE" = "verdadeiro" ]]; then
           docker start $NOME_CONTAINER_MONGO;
         fi
       else
         echo "MongoDB já está rodando.";
       fi
 
-    - if [[ -z "$RNNING_APP_ID" ]]; then
+    - if [[ -z "$RUNNING_APP_ID" ]]; then
         CONTAINER_ID=$(docker container ls -f name=$NOME_CONTAINER_APP -a -q);
         if [[ -z "$CONTAINER_ID" ]]; then
           CONTAINER_APP_EXISTE="falso";
         else
-          CONTAINER_APP_EXISTE="verdadeiro"
+          CONTAINER_APP_EXISTE="verdadeiro";
         fi
         if [[ "$CONTAINER_APP_EXISTE" = "verdadeiro" ]]; then
           docker start $NOME_CONTAINER_APP;
         fi                    
       else
-        echo "APLICAÇÂO já  está rodando.";
+        echo "Aplicação já está rodando.";
       fi  
