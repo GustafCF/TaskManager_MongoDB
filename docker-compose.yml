@@ -24,7 +24,7 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: admin
       ME_CONFIG_MONGODB_URL: mongodb://admin:admin@mongo:27017/
       ME_CONFIG_BASICAUTH: "false"
-    netwoks:
+    networks:
        - app-network
       
   app:
@@ -49,4 +49,4 @@ volumes:
   mongo_data:
   
 networks:
-  app-network 
+  app-network: 
