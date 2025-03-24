@@ -39,7 +39,7 @@ before_script:
 #APP VERIFY
   - RUNNING_APP_ID=$(docker container ls -f name=$NOME_CONTAINER_APP -f status=running -q)
   - if [[ -z "$RUNNING_APP_ID" ]]; then
-      CONTAINER_APP_ATIVO="falso"
+      CONTAINER_APP_ATIVO="falso";
     else
       CONTAINER_APP_ATIVO="verdadeiro";
       CONTAINER_APP_EXISTE="verdadeiro";
