@@ -38,7 +38,7 @@ before_script:
     fi
 #APP VERIFY
   - RUNNING_APP_ID=$(docker container ls -f name=$NOME_CONTAINER_APP -f status=running -q)
-  - if [[ -z "$RUNNING_ID" ]]; then
+  - if [[ -z "$RUNNING_APP_ID" ]]; then
       CONTAINER_APP_ATIVO="falso"
     else
       CONTAINER_APP_ATIVO="verdadeiro";
@@ -82,8 +82,8 @@ Implantacao_Aplicacao:
     - docker build -t $IMAGEM_APP:$CI_COMMIT_SHORT_SHA .
     - docker tag $IMAGEM_APP:$CI_COMMIT_SHORT_SHA $MAGEM_APP:latest
     - docker push $IMAGEM_APP:latest
-    - if [[ "$CONTAINER_APP_EXISTE" = "falso"]]; then
-        docker run --name $NOME_CONTAINER_APP --network $NOME_DA_REDE -p $BLIND_DE_PORTA -e DATA_MONGO_URI=mongodb://admin:admin@mongodb:27017/workshop_mongo?authSource=admin -d $IMAGEM_APP:latest
+    - if [[ "$CONTAINER_APP_EXISTE" = "falso" ]]; then
+        docker run --name $NOME_CONTAINER_APP --network $NOME_DA_REDE -p $BLIND_DE_PORTA_APP -e DATA_MONGO_URI=mongodb://admin:admin@mongodb:27017/workshop_mongo?authSource=admin -d $IMAGEM_APP:latest
       else
         echo "Container da aplicação já existe.";
       fi
