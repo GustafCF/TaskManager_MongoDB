@@ -20,6 +20,8 @@ stages:
   - start
 
 before_script:
+  - apt-get update && apt-get install -y docker.io
+
   # MONGO VERIFY
   - RUNNING_MONGO_ID=$(docker container ls -f name=$NOME_CONTAINER_MONGO -f status=running -q)
   - if [[ -z "$RUNNING_MONGO_ID" ]]; then
