@@ -1,79 +1,75 @@
+
 variables:
-  IMAGEM_MONGO: mongo:4.4
-  IMAGEM_APP: registry.gitlab.com/g.cesarfranco7/taskmanager_mongodb
-  BIND_DE_PORTA_MONGO: "27017:27017"
-  BIND_DE_PORTA_APP: "8080:8080"
-  PASTA_ORIGEM_VOLUME_MONGO: /C/docker/volumes/mongo
+  APP_PATH: taskmanager_mongodb
+  DOCKER_TAG_NAME: $APP_PATH:latest
+  NOME_DO_CONTAINER: task_app_container
   NOME_DA_REDE: app-network
-  NOME_CONTAINER_MONGO: mongodb
-  NOME_CONTAINER_APP: task_app_container
-  # Removidas variáveis de estado que não persistem entre jobs
+  BIND_DE_PORTA: 8080:8080
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  SPRING_PROFILES_ACTIVE: "test"
+  MONGODB_URI: "mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin"
 
 stages:
+  - test
+  - prebuild
   - build
   - deploy
-  - start
 
-before_script:
-  - apt-get update && apt-get install -y docker.io docker-compose
-  - docker --version
-
-build:
-  stage: build
+Unit_Test:
+  stage: test
   image: maven:3.9.6-eclipse-temurin-21
-  script: 
-    - mvn clean package -DskipTests
+  only:
+    - dev
+  except:
+    - main
   artifacts:
     paths:
-      - target/*.jar
-    expire_in: 2 hours
-
-deploy_infra:
-  stage: deploy
-  only:
-    - dev
+      - $APP_PATH/target/surefire-reports/
+  cache:
+    paths:
+      - $APP_PATH
   script:
-    # Verifica e cria rede se necessário
-    - if ! docker network inspect $NOME_DA_REDE >/dev/null 2>&1; then docker network create $NOME_DA_REDE; fi
-    
-    # Verifica e cria container MongoDB se necessário
-    - if ! docker container inspect $NOME_CONTAINER_MONGO >/dev/null 2>&1; then
-        docker run --name $NOME_CONTAINER_MONGO --network $NOME_DA_REDE \
-          -v $PASTA_ORIGEM_VOLUME_MONGO:/data/db -p $BIND_DE_PORTA_MONGO \
-          -e MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin} \
-          -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:-admin} \
-          -d $IMAGEM_MONGO;
-      elif ! docker ps | grep $NOME_CONTAINER_MONGO >/dev/null; then
-        docker start $NOME_CONTAINER_MONGO;
-      fi
+    - cd $APP_PATH
+    - mvn test
 
-deploy_app:
-  stage: deploy
-  needs: [build]
+Clear_Image:
+  stage: prebuild
   only:
     - dev
-    - /^release_[0-9]+(?:.[0-9]+)+$/
-  script: 
-    - docker build -t $IMAGEM_APP:$CI_COMMIT_SHORT_SHA .
-    - docker tag $IMAGEM_APP:$CI_COMMIT_SHORT_SHA $IMAGEM_APP:latest
-    - docker push $IMAGEM_APP:latest
-    
-    # Verifica e cria container App se necessário
-    - if ! docker container inspect $NOME_CONTAINER_APP >/dev/null 2>&1; then
-        docker run --name $NOME_CONTAINER_APP --network $NOME_DA_REDE \
-          -p $BIND_DE_PORTA_APP \
-          -e DATA_MONGO_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-admin}@$NOME_CONTAINER_MONGO:27017/workshop_mongo?authSource=admin \
-          -d $IMAGEM_APP:latest;
-      elif ! docker ps | grep $NOME_CONTAINER_APP >/dev/null; then
-        docker start $NOME_CONTAINER_APP;
-      fi
-
-start_services:
-  stage: start
-  only:
-    - dev
+  dependencies: []
+  cache: []
+  variables:
+    GIT_STRATEGY: none
   script:
-    # Garante que todos os serviços estão rodando
-    - if ! docker ps | grep $NOME_CONTAINER_MONGO >/dev/null; then docker start $NOME_CONTAINER_MONGO; fi
-    - if ! docker ps | grep $NOME_CONTAINER_APP >/dev/null; then docker start $NOME_CONTAINER_APP; fi
-    - docker ps
+    - docker conatiner stop $(docker container ls -a ancestor=$DOCKER_TAG_NAME -q) || FAILED=true
+    - echo Tentativa de parada de container. Falhou? - $FAILED
+    - FAILED=false
+    - docker container rm $(docker container ls -a -f ancestor=$DOCKER_TAG_NAME -q) || FAILED=true
+    - echo Tentativa de remoção do container. Falhou? - $FAILED
+    - FAILED=false
+    - docker image rm $DOCKER_TAG_NAME || FAILED=true
+    - echo Tentativa de remoção da image. Falhou? - $FAILED
+
+Create_Image:
+  stage: build
+  only:
+    - dev
+  dependencies: []
+  cache:
+    paths:
+      - $APP_PATH
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker build --no-cache -t $DOCKER_TAG_NAME ./$APP_PATH
+
+Create_Container:
+  stage: build
+  only:
+    - dev
+  dependencies: []
+  cache: []
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker run --name $NOME_DO_CONTAINER --network $NOME_DA_REDE -p $BIND_DE_PORTA -d $DOCKER_TAG_NAME
