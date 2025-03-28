@@ -1,10 +1,9 @@
-
 variables:
-  APP_PATH: task_mongoDB
-  DOCKER_TAG_NAME: $APP_PATH:latest
+  APP_PATH: "task_mongoDB"
+  DOCKER_TAG_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   NOME_DO_CONTAINER: task_app_container
   NOME_DA_REDE: app-network
-  BIND_DE_PORTA: 8080:8080
+  BIND_DE_PORTA: "8080:8080"
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
   SPRING_PROFILES_ACTIVE: "test"
   MONGODB_URI: "mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin"
@@ -12,7 +11,6 @@ variables:
 
 stages:
   - test
-  - prebuild
   - build
   - deploy
 
@@ -21,61 +19,38 @@ Unit_Test:
   image: maven:3.9.6-eclipse-temurin-21
   only:
     - dev
-  except:
-    - main
-  variables:
-    MONGO_INITDB_ROOT_USERNAME: admin
-    MONGO_INITDB_ROOT_PASSWORD: admin
-    WAIT_TIMEOUT: 30  
+  services:
+    - name: mongo:latest
+      alias: mongo
+  script:
+    - cd $APP_PATH
+    - mvn verify -Dspring.data.mongodb.uri=$MONGODB_URI
+    - mvn test
   artifacts:
     paths:
       - $APP_PATH/target/surefire-reports/
-  cache:
-    paths:
-      - $APP_PATH
-  script:
-    - mvn verify -Dspring.data.mongodb.uri=$MONGODB_URI
-    - mvn test
-    
 
-Clear_Image:
-  stage: prebuild
-  only:
-    - dev
-  dependencies: []
-  cache: []
-  variables:
-    GIT_STRATEGY: none
-  script:
-    - docker conatiner stop $(docker container ls -a ancestor=$DOCKER_TAG_NAME -q) || FAILED=true
-    - echo Tentativa de parada de container. Falhou? - $FAILED
-    - FAILED=false
-    - docker container rm $(docker container ls -a -f ancestor=$DOCKER_TAG_NAME -q) || FAILED=true
-    - echo Tentativa de remoção do container. Falhou? - $FAILED
-    - FAILED=false
-    - docker image rm $DOCKER_TAG_NAME || FAILED=true
-    - echo Tentativa de remoção da image. Falhou? - $FAILED
-
-Create_Image:
+Build_Image:
   stage: build
   only:
     - dev
-  dependencies: []
-  cache:
-    paths:
-      - $APP_PATH
-  variables:
-    GIT_STRATEGY: none
+  image: docker:latest
+  services:
+    - docker:dind
   script:
-    - docker build --no-cache -t $DOCKER_TAG_NAME ./$APP_PATH
+    - cd $APP_PATH
+    - docker build -t $DOCKER_TAG_NAME .
+    - docker push $DOCKER_TAG_NAME
 
-Create_Container:
-  stage: build
+Deploy_Container:
+  stage: deploy
   only:
     - dev
-  dependencies: []
-  cache: []
-  variables:
-    GIT_STRATEGY: none
+  image: docker:latest
+  services:
+    - docker:dind
   script:
+    - docker network create $NOME_DA_REDE || true
+    - docker stop $NOME_DO_CONTAINER || true
+    - docker rm $NOME_DO_CONTAINER || true
     - docker run --name $NOME_DO_CONTAINER --network $NOME_DA_REDE -p $BIND_DE_PORTA -d $DOCKER_TAG_NAME
