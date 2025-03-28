@@ -1,6 +1,6 @@
 
 variables:
-  APP_PATH: taskmanager_mongodb
+  APP_PATH: task_mongoDB
   DOCKER_TAG_NAME: $APP_PATH:latest
   NOME_DO_CONTAINER: task_app_container
   NOME_DA_REDE: app-network
