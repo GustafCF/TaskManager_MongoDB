@@ -29,7 +29,6 @@ Unit_Test:
     paths:
       - $APP_PATH
   script:
-    - cd $APP_PATH
     - mvn test
 
 Clear_Image:
