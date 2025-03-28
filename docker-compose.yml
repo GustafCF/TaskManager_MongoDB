@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mongo:
     image: mongo:4.4
@@ -11,7 +13,7 @@ services:
     volumes:
       - mongo_data:/data/db
     networks:
-      - app-network	
+      - app-network
 
   mongo-express:
     image: mongo-express
@@ -24,29 +26,33 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: admin
       ME_CONFIG_MONGODB_URL: mongodb://admin:admin@mongo:27017/
       ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongo
     networks:
-       - app-network
-      
+      - app-network
+
   app:
-    container_name: task_app_contianer
+    container_name: task_app_container
     depends_on:
       - mongo
     build:
-      context: "./"
+      context: .
       dockerfile: Dockerfile
-    working_dir: /usr/src/task
-    restart: on-failure
+    working_dir: /usr/src/app
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      - DATA_MONGODB_URI=mongodb://admin:admin@localhost:27017/workshop_mongo?authSource=admin      
+      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin
     volumes:
-      - ./src/:/usr/src/task
+      - ./src:/usr/src/app/src
     networks:
-      - app-network   
-     
+      - app-network
+
 volumes:
   mongo_data:
-  
+    driver: local
+
 networks:
-  app-network: 
+  app-network:
+    driver: bridge
