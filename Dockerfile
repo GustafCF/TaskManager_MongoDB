@@ -8,4 +8,4 @@ RUN mvn -f /home/app/pom.xml clean package -Dmaven.test.skip=true
 FROM openjdk:21-oracle
 COPY --from=build /home/app/target/task_mongoDB-0.0.1-SNAPSHOT.jar /usr/local/lib/task_mongoDB.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/usr/local/lib/taskmanager.jar"]
+ENTRYPOINT ["java", "-jar", "/usr/local/lib/task_mongoDB.jar"]
