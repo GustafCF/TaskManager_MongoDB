@@ -8,6 +8,7 @@ variables:
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
   SPRING_PROFILES_ACTIVE: "test"
   MONGODB_URI: "mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin"
+  WAIT_TIMEOUT: "30"
 
 stages:
   - test
@@ -22,6 +23,10 @@ Unit_Test:
     - dev
   except:
     - main
+  variables:
+    MONGO_INITDB_ROOT_USERNAME: admin
+    MONGO_INITDB_ROOT_PASSWORD: admin
+    WAIT_TIMEOUT: 30  
   artifacts:
     paths:
       - $APP_PATH/target/surefire-reports/
@@ -29,7 +34,9 @@ Unit_Test:
     paths:
       - $APP_PATH
   script:
+    - mvn verify -Dspring.data.mongodb.uri=$MONGODB_URI
     - mvn test
+    
 
 Clear_Image:
   stage: prebuild
