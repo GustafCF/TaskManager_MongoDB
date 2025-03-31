@@ -64,6 +64,7 @@ Construir_Imagem:
   only:
     - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
+    - main
   dependencies: []
   cache: 
     paths:
@@ -76,11 +77,14 @@ Implantar_Aplicacao:
   only:
     - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
+    - main
   dependencies: []
   cache: []
   variables:
     GIT_STRATEGY: none
   script:
+    - docker container stop mongodb mongo_express $NOME_DO_CONTAINER || true
+    - docker container rm mongodb mongo_express $NOME_DO_CONTAINER || true
     - docker network create $NOME_DA_REDE || true
     - docker run -d --name mongodb --network $NOME_DA_REDE -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=admin $MONGO_TAG
     - docker run -d --name mongo_express --network $NOME_DA_REDE -e ME_CONFIG_MONGODB_ADMINUSERNAME=admin -e ME_CONFIG_MONGODB_ADMINPASSWORD=admin -e ME_CONFIG_MONGODB_URL="mongodb://admin:admin@mongodb:27017/" -p 8081:8081 $MONGO_EXPRESS_TAG
