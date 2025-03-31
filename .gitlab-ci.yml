@@ -68,8 +68,6 @@ Construir_Imagem:
   cache: 
     paths:
       - $APP_PATH
-  # variables:
-  #   GIT_STRATEGY: none
   script:
     - docker build --no-cache -t $DOCKER_TAG_NAME .
 
