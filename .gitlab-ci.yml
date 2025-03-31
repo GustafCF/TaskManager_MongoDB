@@ -14,21 +14,28 @@ stages:
   - build
   - deploy
 
-Unit_Test:
+Testes_Unitarios:
   stage: test
-  image: maven:3.9.6-eclipse-temurin-21
-  only:
-    - dev
-  services:
-    - name: mongo:latest
-      alias: mongo
-  script:
-    - cd $APP_PATH
-    - mvn verify -Dspring.data.mongodb.uri=$MONGODB_URI
-    - mvn test
   artifacts:
     paths:
-      - $APP_PATH/target/surefire-reports/
+      - target/surefire-reports/
+  cache:
+    paths:
+      - .m2/repository
+      - target/
+  image: maven:3.9-eclipse-temurin-21
+  services:
+    - name: mongo:6.0
+      alias: mongo
+      command: [--auth]
+  variables:
+    MONGO_INITDB_ROOT_USERNAME: admin
+    MONGO_INITDB_ROOT_PASSWORD: admin
+    SPRING_DATA_MONGODB_URI: "mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin"
+  script:
+    - echo "Waiting for MongoDB to be ready..."
+    - timeout 30 bash -c 'while ! docker exec mongo mongosh --eval "db.runCommand({ ping: 1 })" --quiet; do sleep 2; done'
+    - mvn clean test
 
 Build_Image:
   stage: build
