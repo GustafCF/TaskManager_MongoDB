@@ -33,8 +33,16 @@ Testes_Unitarios:
     MONGO_INITDB_ROOT_PASSWORD: admin
     SPRING_DATA_MONGODB_URI: "mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin"
   script:
-    - echo "Waiting for MongoDB to be ready..."
-    - timeout 30 bash -c 'while ! docker exec mongo mongosh --eval "db.runCommand({ ping: 1 })" --quiet; do sleep 2; done'
+    - |
+      echo "Waiting for MongoDB to be ready..."
+      for i in {1..15}; do
+        if docker exec mongo mongosh --eval "db.runCommand({ ping: 1 })" --quiet; then
+          echo "MongoDB is ready!"
+          break
+        fi
+        echo "Waiting for MongoDB... Attempt $i/15"
+        sleep 2
+      done
     - mvn clean test
 
 Build_Image:
