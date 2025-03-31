@@ -1,13 +1,11 @@
 variables:
-  APP_PATH: "task_mongoDB"
-  DOCKER_TAG_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+  APP_PATH: .
+  DOCKER_TAG_NAME: task_mongodb:latest
   NOME_DO_CONTAINER: task_app_container
   NOME_DA_REDE: app-network
-  BIND_DE_PORTA: "8080:8080"
-  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
-  SPRING_PROFILES_ACTIVE: "test"
-  MONGODB_URI: "mongodb://admin:admin@mongo:27017/workshop_mongo?authSource=admin"
-  WAIT_TIMEOUT: "30"
+  BIND_DE_PORTA: 8080:8080
+  MONGO_TAG: mongo:4.4
+  MONGO_EXPRESS_TAG: mongo-express:1.0
 
 stages:
   - test
@@ -25,7 +23,7 @@ Testes_Unitarios:
       - target/
   image: maven:3.9-eclipse-temurin-21
   services:
-    - name: mongo:6.0
+    - name: mongo:4.4
       alias: mongo
       command: [--auth]
   variables:
@@ -45,27 +43,48 @@ Testes_Unitarios:
       done
     - mvn clean test
 
-Build_Image:
+Limpar_Ambiente:
+  stage: prebuild
+  only:
+    - /^release_[0-9]+(?:.[0-9]+)+$/
+    - dev
+  except:
+    - main  
+  dependencies: []
+  cache: []
+  variables:
+    GIT_STRATEGY: none
+  script: 
+    - docker container stop $NOME_DO_CONTAINER || true
+    - docker container rm $NOME_DO_CONTAINER || true
+    - docker image rm $DOCKER_TAG_NAME || true
+    - docker network rm $NOME_DA_REDE || true
+
+Construir_Imagem:
   stage: build
   only:
+    - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
-  image: docker:latest
-  services:
-    - docker:dind
+    - main
+  dependencies: []
+  cache: 
+    paths:
+      - $APP_PATH
   script:
-    - cd $APP_PATH
-    - docker build -t $DOCKER_TAG_NAME .
-    - docker push $DOCKER_TAG_NAME
+    - docker build --no-cache -t $DOCKER_TAG_NAME .
 
-Deploy_Container:
+Implantar_Aplicacao:
   stage: deploy
   only:
+    - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
-  image: docker:latest
-  services:
-    - docker:dind
+    - main
+  dependencies: []
+  cache: []
+  variables:
+    GIT_STRATEGY: none
   script:
     - docker network create $NOME_DA_REDE || true
-    - docker stop $NOME_DO_CONTAINER || true
-    - docker rm $NOME_DO_CONTAINER || true
-    - docker run --name $NOME_DO_CONTAINER --network $NOME_DA_REDE -p $BIND_DE_PORTA -d $DOCKER_TAG_NAME
+    - docker run -d --name mongodb --network $NOME_DA_REDE -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=admin $MONGO_TAG
+    - docker run -d --name mongo_express --network $NOME_DA_REDE -e ME_CONFIG_MONGODB_ADMINUSERNAME=admin -e ME_CONFIG_MONGODB_ADMINPASSWORD=admin -e ME_CONFIG_MONGODB_URL="mongodb://admin:admin@mongodb:27017/" -p 8081:8081 $MONGO_EXPRESS_TAG
+    - docker run --name $NOME_DO_CONTAINER --network $NOME_DA_REDE -p $BIND_DE_PORTA -e SPRING_DATA_MONGODB_URI="mongodb://admin:admin@mongodb:27017/workshop_mongo?authSource=admin" -d $DOCKER_TAG_NAME
