@@ -9,6 +9,7 @@ variables:
 
 stages:
   - test
+  - prebuild
   - build
   - deploy
 
@@ -48,8 +49,6 @@ Limpar_Ambiente:
   only:
     - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
-  except:
-    - main  
   dependencies: []
   cache: []
   variables:
@@ -65,11 +64,12 @@ Construir_Imagem:
   only:
     - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
-    - main
   dependencies: []
   cache: 
     paths:
       - $APP_PATH
+  # variables:
+  #   GIT_STRATEGY: none
   script:
     - docker build --no-cache -t $DOCKER_TAG_NAME .
 
@@ -78,7 +78,6 @@ Implantar_Aplicacao:
   only:
     - /^release_[0-9]+(?:.[0-9]+)+$/
     - dev
-    - main
   dependencies: []
   cache: []
   variables:
