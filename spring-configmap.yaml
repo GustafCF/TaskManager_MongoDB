@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spring-config
+data:
+  application.yml: |
+    spring:
+      application:
+        name: task_mongoDB
+      data:
+        mongodb:
+          uri: mongodb://admin:admin@mongodb:27017/workshop_mongo?authSource=admin
