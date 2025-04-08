@@ -5,4 +5,9 @@ spring:
     data:
         mongodb:
             uri: mongodb://admin:admin@localhost:27017/workshop_mongo?authSource=admin
-            
+
+management:
+  endpoints:
+    web:
+      exposure:
+          include: health, info
